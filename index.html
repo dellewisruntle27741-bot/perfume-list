@@ -294,7 +294,6 @@
         max-width: 500px;
         height: 70px;
         background: #ffffff;
-        /* 核心修改：Z-index 降低到 980，低于 Header(1000)、Sidebar(2001) 和 Modal(2000) */
         z-index: 980;
         display: flex;
         align-items: stretch; /* 撑满高度 */
@@ -1019,6 +1018,12 @@
             style="color: #6a1b9a"
             >Gift Sets 🎁</a
           >
+          <a
+            class="menu-link"
+            onclick="handleMenuClick('Vape')"
+            style="color: #00796b"
+            >Vapes 💨</a
+          >
           <a class="menu-link" onclick="handleMenuClick('BestSellers')"
             >Best Sellers 🔥</a
           >
@@ -1037,7 +1042,7 @@
             "
             >🚚 Track My Order</a
           >
-          <a class="menu-link" href="https://wa.me/16232027321" target="_blank"
+          <a class="menu-link" href="https://wa.me/17253041220" target="_blank"
             >Contact Us</a
           >
         </nav>
@@ -1115,7 +1120,7 @@
             See Policy
           </button>
         </div>
-        <a href="https://wa.me/16232027321" target="_blank" class="trust-item">
+        <a href="https://wa.me/17253041220" target="_blank" class="trust-item">
           <div style="font-size: 2rem; color: #2ecc71; margin-bottom: 10px">
             💬
           </div>
@@ -1321,7 +1326,6 @@
         document.getElementById("track-input").value = "";
       }
 
-      // 辅助函数：根据快递公司生成查询链接
       function getTrackingUrl(carrier, num) {
         if (!carrier) return "https://t.17track.net/en#nums=" + num;
         let c = carrier.toLowerCase();
@@ -1331,7 +1335,6 @@
           return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${num}`;
         if (c.includes("fedex"))
           return `https://www.fedex.com/fedextrack/?trknbr=${num}`;
-        // GOFO Express 或其他未识别的，全部走 17TRACK
         return `https://t.17track.net/en#nums=${num}`;
       }
 
@@ -1342,12 +1345,10 @@
 
         if (!input) return alert("Please enter a name or phone number.");
 
-        // UI Loading State
         btn.textContent = "SEARCHING...";
         btn.disabled = true;
         resultDiv.style.display = "none";
 
-        // 发起请求
         fetch(`${GOOGLE_SCRIPT_URL}?q=${encodeURIComponent(input)}`)
           .then((response) => response.json())
           .then((data) => {
@@ -1356,18 +1357,11 @@
             resultDiv.style.display = "block";
 
             if (data.status === "success") {
-              // 处理多单号：按换行符或空格分割
               let rawTracks = String(data.tracking).split(/[\n\s]+/);
-
-              // 生成每一个单号的 HTML
               let trackHtml = rawTracks
                 .map((num) => {
-                  if (num.length < 5) return ""; // 过滤无效短字符
-
-                  // 获取跳转链接
+                  if (num.length < 5) return "";
                   let trackLink = getTrackingUrl(data.carrier, num);
-
-                  // 核心修改 1：移除 alert，改为触发无弹窗的 Toast 提示
                   return `
                     <div style="background:#fff; border:1px dashed #ccc; border-radius:4px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
                         <div style="display:flex; flex-direction:column; gap:4px;">
@@ -1382,7 +1376,6 @@
                 })
                 .join("");
 
-              // 渲染结果
               resultDiv.innerHTML = `
                 <div style="color:#28a745; font-weight:bold; margin-bottom:5px; font-size:1.1rem;">✅ Order Found!</div>
                 
@@ -1406,7 +1399,6 @@
                 </div>
               `;
             } else {
-              // 没找到
               resultDiv.innerHTML = `
                 <div style="color:#d9534f; font-weight:bold;">❌ Order Not Found</div>
                 <p style="font-size:0.85rem; color:#666; margin-top:5px;">
@@ -1423,7 +1415,6 @@
           });
       }
 
-      // ... (Rest of existing JS functions: loadCart, saveCart, updateWholesaleBanner, etc.)
       const FEATURED_BRANDS = [
         "Creed",
         "Dior",
@@ -1503,7 +1494,6 @@
         const banner = document.getElementById("wholesale-banner");
         const content = document.getElementById("ws-content");
 
-        // 1. Update Top Banner
         if (banner && content) {
           if (qty === 0) {
             banner.className = "ws-banner";
@@ -1520,7 +1510,6 @@
 
             let html = `<div class="ws-progress-box">`;
             let currentOff = Math.round(currentTier.percent * 100);
-            // "Free Shipping" removed from top
 
             html += `<div class="ws-progress-text">Cart: <strong>${qty}</strong> items • Current: <span class="ws-highlight">-${currentOff}% OFF</span></div>`;
             if (nextTier) {
@@ -1536,12 +1525,10 @@
           }
         }
 
-        // 2. Update Bottom Bar Data
         updateBottomBarData(qty);
       }
 
       function updateBottomBarData(totalQty) {
-        // Update Badge
         const badgeEl = document.getElementById("bottom-bar-badge");
         if (totalQty > 0) {
           badgeEl.textContent = totalQty;
@@ -1550,7 +1537,6 @@
           badgeEl.style.display = "none";
         }
 
-        // Calculate Total Price with Discount
         let subtotal = 0;
         cartItems.forEach((item) => {
           subtotal += item.price * item.quantity;
@@ -1562,7 +1548,6 @@
         const discountPercent = tier ? tier.percent : 0;
         const finalTotal = subtotal - subtotal * discountPercent;
 
-        // Update Price Text & Strikethrough
         const priceEl = document.getElementById("bottom-bar-price");
         const originalEl = document.getElementById("bottom-bar-original");
 
@@ -1572,9 +1557,8 @@
           originalEl.style.display = "none";
         } else {
           priceEl.textContent = "$" + Math.round(finalTotal);
-          priceEl.style.color = "#000"; // Big Black Price
+          priceEl.style.color = "#000";
 
-          // Show Strikethrough if discount > 0
           if (discountPercent > 0) {
             originalEl.textContent = "~~$" + subtotal.toFixed(0) + "~~";
             originalEl.style.display = "inline-block";
@@ -1633,10 +1617,8 @@
       function getAddButtonHtml(id) {
         const qty = getCartQty(id);
         if (qty === 0) {
-          // State 0: Large Black Button
           return `<button class="action-btn-black" onclick="updateItemQty('${id}', 1); event.stopPropagation();">ADD TO CART</button>`;
         } else {
-          // State >0: Rectangular Control Box
           return `
                 <div class="action-qty-box">
                     <div class="qty-btn-rect" onclick="updateItemQty('${id}', -1); event.stopPropagation();">-</div>
@@ -1646,10 +1628,12 @@
         }
       }
 
-      // --- Home Render Logic ---
       function renderHome() {
+        // 核心修改：在首页过滤掉电子烟产品，使其完全不出现在首页的任何分类区块中
         const db = (window.perfumeDB || []).filter(
-          (p) => parseInt(p.stock) > 0,
+          (p) => parseInt(p.stock) > 0 && 
+                 !(p.brand && p.brand.toUpperCase() === 'VAPE') && 
+                 !(p.img && p.img.toUpperCase().includes('VAPE'))
         );
         const container = document.getElementById("home-content");
         if (!container) return;
@@ -1666,14 +1650,12 @@
           container.appendChild(section);
         };
 
-        // 【核心修改】：加入基于数字从小到大的精准排序能力
         const bestSellers = db
           .filter((p) => Number(p.top) > 0)
           .sort((a, b) => Number(a.top) - Number(b.top));
         if (bestSellers.length > 0)
           renderSection("🔥 Best Sellers", bestSellers, "BestSellers");
 
-        // 【核心修改】：加入基于数字从小到大的精准排序能力
         const newArrivals = db
           .filter((p) => Number(p.new) > 0)
           .sort((a, b) => Number(a.new) - Number(b.new));
@@ -1711,7 +1693,6 @@
           container.appendChild(otherSection);
         }
 
-        // 【核心修改】：加入基于数字从小到大的精准排序能力
         const saleItems = db
           .filter((p) => Number(p.sale) > 0)
           .sort((a, b) => Number(a.sale) - Number(b.sale));
@@ -1776,10 +1757,8 @@
             : "";
           const stockHtml = getStockHtml(p.inventory);
 
-          // Use NEW button logic
           const buttonHtml = getAddButtonHtml(p.id);
 
-          // 核心修改 2：给按钮包裹层统一增加 data-btn-wrap 属性，方便批量更新
           card.innerHTML = `
             <div style="position:relative;">${imgHtml}<div class="badges-container">${badgesHtml}</div></div>
             <div style="padding: 0 5px 5px 5px; display:flex; flex-direction:column; flex:1;">
@@ -1833,7 +1812,6 @@
         return section;
       }
 
-      // --- Brand & Search Logic ---
       const BRAND_ALIASES = {
         lv: "Louis Vuitton",
         "louis vuitton": "Louis Vuitton",
@@ -1896,7 +1874,6 @@
         return score;
       }
 
-      // --- Grid Render ---
       function switchToGrid(criteria) {
         viewMode = "grid";
         document.getElementById("home-view").style.display = "none";
@@ -1913,19 +1890,16 @@
           filtered = db;
           title = "All Products";
         } else if (criteria === "BestSellers") {
-          // 【核心修改】：点击 See All 进入全屏时也按照数字从小到大排序
           filtered = db
             .filter((p) => Number(p.top) > 0)
             .sort((a, b) => Number(a.top) - Number(b.top));
           title = "Best Sellers";
         } else if (criteria === "New") {
-          // 【核心修改】：点击 See All 进入全屏时也按照数字从小到大排序
           filtered = db
             .filter((p) => Number(p.new) > 0)
             .sort((a, b) => Number(a.new) - Number(b.new));
           title = "New Arrivals";
         } else if (criteria === "Sale") {
-          // 【核心修改】：点击 See All 进入全屏时也按照数字从小到大排序
           filtered = db
             .filter((p) => Number(p.sale) > 0)
             .sort((a, b) => Number(a.sale) - Number(b.sale));
@@ -1933,6 +1907,10 @@
         } else if (criteria === "Set") {
           filtered = db.filter((p) => p.name.toUpperCase().includes("SET"));
           title = "Gift Sets Collection";
+        } else if (criteria === "Vape") {
+          // 核心修改：新增电子烟页面展示逻辑
+          filtered = db.filter((p) => (p.brand && p.brand.toUpperCase() === 'VAPE') || (p.img && p.img.toUpperCase().includes('VAPE')));
+          title = "Vapes Collection";
         } else if (criteria.startsWith("Gender:")) {
           const targetGender = criteria.split(":")[1];
           filtered = db.filter((p) => {
@@ -2034,10 +2012,8 @@
             : "";
           const stockHtml = getStockHtml(p.inventory);
 
-          // Use NEW button logic
           const buttonHtml = getAddButtonHtml(p.id);
 
-          // 核心修改 2：给按钮包裹层统一增加 data-btn-wrap 属性
           div.innerHTML = `
               <div class="item-img-box skeleton-loader" onclick="openModalById('${p.id}')">
                   <picture><source srcset="${webpSrc}" type="image/webp"><img src="${p.img}" loading="lazy" class="lazy-img" onload="this.classList.add('loaded'); this.parentElement.parentElement.classList.remove('skeleton-loader');" onerror="this.parentElement.parentElement.classList.remove('skeleton-loader');"></picture>
@@ -2126,7 +2102,7 @@
         }
         const genderClass = getGenderClass(product.gender);
         document.getElementById("modal-sub").innerHTML =
-          `<div style="font-size:1.1rem; color:#333; margin-bottom:5px;">${product.brand}</div><div style="margin-bottom:8px; font-size:0.85rem; color:#555; display:flex; align-items:center; justify-content:center;"><span class="gender-tag ${genderClass}" style="font-size:0.8rem; margin:0 5px 0 0;">${product.gender || "Unisex"}</span><span style="color:#ccc">|</span> <span style="margin-left:5px">${formatSize(product)}</span></div>${notesHtml}`;
+          `<div style="font-size:1.1rem; color:#333; margin-bottom:5px;">${product.brand || ""}</div><div style="margin-bottom:8px; font-size:0.85rem; color:#555; display:flex; align-items:center; justify-content:center;"><span class="gender-tag ${genderClass}" style="font-size:0.8rem; margin:0 5px 0 0;">${product.gender || "Unisex"}</span><span style="color:#ccc">|</span> <span style="margin-left:5px">${formatSize(product)}</span></div>${notesHtml}`;
 
         const stockEl = document.getElementById("modal-stock");
         const stockVal = getStockHtml(product.inventory);
@@ -2202,7 +2178,6 @@
         overlay.onclick = toggle;
       }
 
-      // Toast 函数供页面任何位置调用
       function showToast(msg) {
         const t = document.getElementById("toast");
         t.textContent = msg;
@@ -2241,13 +2216,11 @@
         saveCart();
         updateWholesaleBanner();
 
-        // 核心修改 2：通过 data-btn-wrap 找到所有对应这个商品ID的容器，统一批量更新！
         const newBtnHtml = getAddButtonHtml(id);
         document.querySelectorAll(`[data-btn-wrap="${id}"]`).forEach((wrap) => {
           wrap.innerHTML = newBtnHtml;
         });
 
-        // 弹窗内的独立更新逻辑
         if (currentModalProductId === id) updateModalButtonState(id);
       };
 
