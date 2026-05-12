@@ -1,10 +1,12 @@
 // ==========================================
-// db.js - 产品数据管理中心
+// db.js - 产品数据管理中心 (多表合并版)
 // ==========================================
 
-// 🔴 请确保这个链接是您“发布到网络”后生成的 CSV 链接
-const SHEET_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTwZ_BgnXtX_ZdO87jkvLU_IMUByJwFKZoyzVVI0Sghwe-2_Qq676JsqsrO0AnGubJGuCxonKizijyj/pub?gid=0&single=true&output=csv";
+// 1. 原本的香水表链接 (gid=0)
+const URL_PERFUME = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTwZ_BgnXtX_ZdO87jkvLU_IMUByJwFKZoyzVVI0Sghwe-2_Qq676JsqsrO0AnGubJGuCxonKizijyj/pub?gid=0&single=true&output=csv";
+
+// 2. 新的电子烟表链接 (gid=1996660828)
+const URL_VAPE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTwZ_BgnXtX_ZdO87jkvLU_IMUByJwFKZoyzVVI0Sghwe-2_Qq676JsqsrO0AnGubJGuCxonKizijyj/pub?gid=1996660828&single=true&output=csv";
 
 // 缓存时间 (1分钟)
 const CACHE_DURATION = 1 * 60 * 1000;
@@ -16,10 +18,9 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function initProductData() {
-  // ⚡️ [重要修改] 更新版本号 V4 -> V5
-  // 这会强制浏览器忽略旧缓存，确保加载包含 Inventory 的新数据
-  const cacheKey = "perfumeDB_Data_V5";
-  const timeKey = "perfumeDB_Time_V5";
+  // ⚡️ [重要] 更新版本号至 V6，强制刷新旧缓存以合并新表数据
+  const cacheKey = "perfumeDB_Data_V6";
+  const timeKey = "perfumeDB_Time_V6";
 
   const now = new Date().getTime();
   const cachedTime = localStorage.getItem(timeKey);
@@ -27,42 +28,52 @@ async function initProductData() {
 
   // 1. 尝试加载缓存
   if (cachedData && cachedTime && now - cachedTime < CACHE_DURATION) {
-    console.log("🚀 加载缓存数据");
+    console.log("🚀 加载合并后的缓存数据");
     try {
       window.perfumeDB = JSON.parse(cachedData);
       runPageLogic();
       return;
     } catch (e) {
-      console.warn("缓存数据损坏，重新下载");
+      console.warn("缓存损坏，准备重新下载");
     }
   }
 
-  // 2. 下载新数据
-  console.log("🌐 下载最新数据...");
+  // 2. 同时下载两个表格的数据
+  console.log("🌐 正在同步多个表格数据...");
   try {
-    const response = await fetch(SHEET_URL);
-    if (!response.ok) throw new Error("网络响应错误");
-    const data = await response.text();
-    window.perfumeDB = parseCSV(data);
+    const [resPerfume, resVape] = await Promise.all([
+      fetch(URL_PERFUME),
+      fetch(URL_VAPE)
+    ]);
+
+    if (!resPerfume.ok || !resVape.ok) throw new Error("部分表格获取失败");
+
+    const csvPerfume = await resPerfume.text();
+    const csvVape = await resVape.text();
+
+    // 解析并合并数据
+    const dataPerfume = parseCSV(csvPerfume);
+    const dataVape = parseCSV(csvVape);
+    
+    // 将电子烟数据合并到总数据库中
+    window.perfumeDB = [...dataPerfume, ...dataVape];
 
     // 存入缓存
     localStorage.setItem(cacheKey, JSON.stringify(window.perfumeDB));
     localStorage.setItem(timeKey, now);
 
+    console.log(`✅ 数据同步完成！总计: ${window.perfumeDB.length} 个产品`);
     runPageLogic();
   } catch (error) {
-    console.error("下载失败:", error);
-    // 如果下载失败但有旧缓存（即使是旧版本的），作为备用加载
+    console.error("数据下载失败:", error);
     if (cachedData) {
       window.perfumeDB = JSON.parse(cachedData);
       runPageLogic();
-      alert("网络较慢，已加载离线数据");
     }
   }
 }
 
 function runPageLogic() {
-  // 确保首页和购物车逻辑存在才执行
   if (typeof renderHome === "function") renderHome();
   if (typeof renderCart === "function") renderCart();
 }
@@ -71,8 +82,6 @@ function parseCSV(csvText) {
   const lines = csvText.trim().split("\n");
   if (lines.length < 2) return [];
 
-  // 🔹 注意：这里会将所有表头转为小写 (toLowerCase)
-  // 所以表格里的 "Notes" -> "notes", "Inventory" -> "inventory"
   const headers = lines[0]
     .trim()
     .split(",")
@@ -81,7 +90,6 @@ function parseCSV(csvText) {
   return lines
     .slice(1)
     .map((line) => {
-      // 处理 CSV 中的逗号和引号
       const values = [];
       let current = "";
       let inQuote = false;
@@ -98,20 +106,21 @@ function parseCSV(csvText) {
       values.push(current.trim());
 
       const obj = {};
-      // 如果列数不匹配，跳过
       if (values.length < headers.length) return null;
 
       headers.forEach((header, index) => {
         let val = values[index] ? values[index].replace(/^"|"$/g, "") : "";
 
-        // 🔴 [关键修改] 这里把 inventory 也强制转为数字类型
-        // 这样在 index.html 里才能进行数学比较 (inventory < 50)
+        // 强制转为数字的字段
         if (
           header === "price" ||
           header === "stock" ||
-          header === "inventory"
+          header === "inventory" ||
+          header === "top" ||
+          header === "new" ||
+          header === "sale"
         ) {
-          val = Number(val);
+          val = isNaN(Number(val)) ? 0 : Number(val);
         }
 
         obj[header] = val;
